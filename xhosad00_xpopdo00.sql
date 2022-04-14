@@ -24,6 +24,11 @@ DROP SEQUENCE S_ID_prestupku;
 DROP SEQUENCE S_ID_majitele;
 DROP SEQUENCE S_ID_kradeze;
 
+-- alter formats
+
+ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI';
+ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MM-YYYY';
+
 --create sequences
 CREATE SEQUENCE S_ID_osoby START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
 CREATE SEQUENCE S_ID_opravneni START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
@@ -44,6 +49,7 @@ CREATE TABLE Osoba(
     ID_osoby NUMBER DEFAULT S_ID_osoby.nextval,
     jmeno VARCHAR(20),
     prijmeni VARCHAR(20),
+    datum_narozeni DATE,
     rodne_cislo VARCHAR(20), CONSTRAINT rodne_cislo_delka check (LENGTH(rodne_cislo) = 10), check (MOD(rodne_cislo,11) = 0) ,--TODO pridat DATE datum narozeni?
     CONSTRAINT PK_ID_osoby PRIMARY KEY (ID_osoby)
 );
@@ -51,7 +57,7 @@ CREATE TABLE Osoba(
 CREATE TABLE Ridic(
     ID_prukazu CHAR(10),
     zakaz_rizeni NUMBER(1) DEFAULT 0,
-    body NUMERIC(2) DEFAULT 0,
+    trestneBody NUMERIC(2) DEFAULT 0,
     ID_osoby NUMBER CONSTRAINT ID_osoby_NN NOT NULL,
     CONSTRAINT PK_ID_prukazu PRIMARY KEY (ID_prukazu),
     CONSTRAINT FK_ID_osoby FOREIGN KEY (ID_osoby) REFERENCES Osoba 
@@ -161,16 +167,24 @@ CREATE TABLE NakladniAutomobil(
 --Policista
 INSERT INTO Policista(sluzebni_c, jmeno, prijmeni, pozice)
     VALUES (525320,'Ludovic', 'Cruchot','cetnik');
+INSERT INTO Policista(sluzebni_c, jmeno, prijmeni, pozice)
+    VALUES (525321,'Jean', 'Bonjour','porucik');
+INSERT INTO Policista(sluzebni_c, jmeno, prijmeni, pozice)
+    VALUES (525322,'James', 'Bond','porucik');
 
 --Osoba
-INSERT INTO Osoba(jmeno, prijmeni, rodne_cislo)
-    VALUES ('Pepa','Novak','0012175944');
-INSERT INTO Osoba(jmeno, prijmeni, rodne_cislo)
-    VALUES ('Jan','Pospisil','9108014894');   --majitel bez ricidkeho prukazu
-INSERT INTO Osoba(jmeno, prijmeni, rodne_cislo)
-    VALUES ('Dan','Kurtka','6402112827');     --ridic bez vozidla
-INSERT INTO Osoba(jmeno, prijmeni, rodne_cislo)
-    VALUES ('Alexnadr','Bonto','7108137212');
+INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
+    VALUES ('Pepa','Novak', TO_DATE('17-12-2000', 'DD-MM-YY'), '0012175944');
+INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
+    VALUES ('Jan','Pospisil', TO_DATE('01-08-1991', 'DD-MM-YY'), '9108014894');
+INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
+    VALUES ('Dan','Kurtka', TO_DATE('11-02-1964', 'DD-MM-YY'), '6402112827');
+INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
+    VALUES ('Alexnadr','Bonto', TO_DATE('13-08-1971', 'DD-MM-YY'), '7108137212');
+INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
+    VALUES ('William','Shakespeare', TO_DATE('12-08-1965', 'DD-MM-YY'), '6508127032');
+INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
+    VALUES ('David','Bartosik', TO_DATE('05-11-2005', 'DD-MM-YY'), '0511056062');
 
 --Ridic
 INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
@@ -179,30 +193,34 @@ INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
     VALUES ('FF112346', 0, 3);
 INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
     VALUES ('EA843115', 0, 4);
+INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
+    VALUES ('EB693227', 0, 6);
     
 --RidickeOpravneni
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('05-02-2005', 'AM', 'EG123456');
+    VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'AM', 'EG123456');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('05-02-2005', 'B', 'EG123456');
+    VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'B', 'EG123456');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('05-02-2005', 'B1', 'EG123456');
+    VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'B1', 'EG123456');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('13-09-1994', 'B', 'FF112346');
+    VALUES (TO_DATE('13-09-1994', 'DD-MM-YY'), 'B', 'FF112346');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('13-09-1994', 'B1', 'FF112346');
+    VALUES (TO_DATE('13-09-1994', 'DD-MM-YY'), 'B1', 'FF112346');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('03-04-2012', 'C', 'FF112346');
+    VALUES (TO_DATE('03-04-2012', 'DD-MM-YY'), 'C', 'FF112346');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('03-04-2012', 'C1', 'FF112346');
+    VALUES (TO_DATE('03-04-2012', 'DD-MM-YY'), 'C1', 'FF112346');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('06-02-1964', 'B1', 'EA843115');
+    VALUES (TO_DATE('06-02-1964', 'DD-MM-YY'), 'B1', 'EA843115');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('06-02-1964', 'B', 'EA843115');
+    VALUES (TO_DATE('06-02-1964', 'DD-MM-YY'), 'B', 'EA843115');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('05-02-2005', 'A1', 'EG123456');
+    VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'A1', 'EG123456');
 INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
-    VALUES ('05-02-2005', 'A2', 'EG123456');
+    VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'A2', 'EG123456');
+INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+    VALUES (TO_DATE('15-07-2021', 'DD-MM-YY'), 'A1', 'EB693227');
 
 --Majitel
 INSERT INTO Majitel(ID_prukazu, ID_osoby)
@@ -211,6 +229,8 @@ INSERT INTO Majitel(ID_prukazu, ID_osoby)
     VALUES (null, 2);
 INSERT INTO Majitel(ID_prukazu, ID_osoby)
     VALUES ('EA843115', 4);
+INSERT INTO Majitel(ID_prukazu, ID_osoby)
+    VALUES ('EB693227', 6);
 
 --Vozidlo
 INSERT INTO Vozidlo(VIN, znacka, nazev, rok_vyroby, barva, objem_motoru, SPZ, ID_majitele)
@@ -221,7 +241,8 @@ INSERT INTO Vozidlo(VIN, znacka, nazev, rok_vyroby, barva, objem_motoru, SPZ, ID
     VALUES ('4JGBB86E27A199749', 'Ford', 'Ford Escape', 2002, 'cerna', 3000, 'A5B46064', 3);
 INSERT INTO Vozidlo(VIN, znacka, nazev, rok_vyroby, barva, objem_motoru, SPZ, ID_majitele)
     VALUES ('JYA2RRA01KA020333', 'Yamaha', 'ysr50', 1989, 'modra', 100, 'GR400253', 1);
-
+INSERT INTO Vozidlo(VIN, znacka, nazev, rok_vyroby, barva, objem_motoru, SPZ, ID_majitele)
+    VALUES ('WYB4RXA04KA050443', 'Honda', 'CBR-R 125', 2004, 'oranzova', 125, '6M820091', 4);
 
 --OsobniAutomobil
 INSERT INTO OsobniAutomobil(VIN)
@@ -234,11 +255,12 @@ INSERT INTO OsobniAutomobil(VIN)
 --Motocykl
 INSERT INTO Motocykl(VIN)
     VALUES ('JYA2RRA01KA020333');
-
+INSERT INTO Motocykl(VIN)
+    VALUES ('WYB4RXA04KA050443');
 
 --HistorieSPZ
 INSERT INTO HistorieSPZ(SPZ, datum_zmeny)
-    VALUES ('A1T94678', '01-01-2016');
+    VALUES ('A1T94678', TO_DATE('01-01-2016', 'DD-MM-YYYY'));
 
 --MelSPZ
 INSERT INTO MelSPZ(VIN, SPZ)
@@ -247,6 +269,8 @@ INSERT INTO MelSPZ(VIN, SPZ)
 --Kradez
 INSERT INTO  Kradez(zemne, mesto, ulice, datum_a_cas, VIN, sluzebni_c)
     VALUES ('CR', 'Janlovice', 'Janlovice 202', '10-04-1995 17:30', '4JGBB86E27A199749', 525320);
+INSERT INTO  Kradez(zemne, mesto, ulice, datum_a_cas, VIN, sluzebni_c)
+    VALUES ('CR', 'Praha', 'Neumannova 2', '10-08-2002 12:33', '4JGBB86E27A199749', 525321);
 
 
 --PRESTUPEK---- hrani si s updatem
@@ -254,18 +278,136 @@ INSERT INTO  Kradez(zemne, mesto, ulice, datum_a_cas, VIN, sluzebni_c)
 --SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC), pouzit nize
 --1--
 INSERT INTO Prestupek(nazev, popis, zhotoveni, vyse, body, ID_prukazu, sluzebni_c)
-    VALUES ('Průjezd na cervenou', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Námestní a Brumbalova', '10-04-1995', 4500, 3, 'EG123456', 525320);
+    VALUES ('Průjezd na cervenou', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Námestní a Brumbalova', TO_DATE('10-04-1995', 'DD-MM-YYYY'), 4500, 3, 'EG123456', 525320);
     
 UPDATE Ridic
-SET body = body + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
+SET trestneBody = trestneBody + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
 WHERE ID_prukazu = 'EG123456';
+
+UPDATE Ridic
+SET zakaz_rizeni = 1
+WHERE trestneBody >= 12;
 --1--
 --2
 INSERT INTO Prestupek(nazev, popis, zhotoveni, vyse, body, ID_prukazu, sluzebni_c)
-    VALUES ('Průjezd na cervenou a kolize', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova, čelní náraz s SUV, ...', '10-04-2020', 4500, 5, 'EG123456', 525320);
+    VALUES ('Průjezd na cervenou a kolize', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova, čelní náraz s SUV, ...', TO_DATE('10-04-2020', 'DD-MM-YYYY'), 4500, 5, 'EG123456', 525320);
 
 UPDATE Ridic
-SET body = body + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
+SET trestneBody = trestneBody + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
 WHERE ID_prukazu = 'EG123456';
+
+UPDATE Ridic
+SET zakaz_rizeni = 1
+WHERE trestneBody >= 12;
 --2--
+
+--3--
+INSERT INTO Prestupek(nazev, popis, zhotoveni, vyse, body, ID_prukazu, sluzebni_c)
+    VALUES ('Prekroceni rychlosti', 'Prekroceni rychlosti v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova', TO_DATE('15-05-2021', 'DD-MM-YYYY'), 5000, 4, 'EG123456', 525321);
+
+UPDATE Ridic
+SET trestneBody = trestneBody + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
+WHERE ID_prukazu = 'EG123456';
+
+UPDATE Ridic
+SET zakaz_rizeni = 1
+WHERE trestneBody >= 12;
+--3--
 --PRESTUPEK----
+
+
+---SELECTY---
+--1--
+-- Select vybere osoby narozene po roce 2004 majici ridicske opravneni a vlastnici motocykl.
+SELECT ID_osoby, jmeno, prijmeni, znacka, nazev
+FROM Osoba NATURAL JOIN Ridic NATURAL JOIN Majitel NATURAL JOIN Vozidlo NATURAL JOIN Motocykl
+WHERE datum_narozeni > TO_DATE('31-12-2004', 'DD-MM-YYYY');
+
+--1--
+
+--2--
+-- Vybere ridice, kteri maji zakaz rizeni a vlastni vic jak 1 ridicske opravneni
+SELECT jmeno, prijmeni
+FROM (SELECT jmeno, prijmeni, zakaz_rizeni, COUNT(*) pocet
+    FROM Osoba NATURAL JOIN Ridic NATURAL JOIN RidickeOpravneni
+    GROUP BY jmeno, prijmeni, zakaz_rizeni)
+WHERE pocet > 1 AND zakaz_rizeni = 1;
+--2--
+
+--3--
+-- Vybere Prestupky spachane ridicem Pepa Novak ze dne 10.4.2020
+SELECT nazev 
+FROM Prestupek NATURAL JOIN Ridic NATURAL JOIN Osoba
+WHERE jmeno = 'Pepa' AND prijmeni = 'Novak' AND zhotoveni = TO_DATE('10-04-2020', 'DD-MM-YYYY');
+--3--
+
+--4--
+-- Vybere Policisty, kteri zapsali prestupek dne 10.4.2020 ve vysi 4500 Kc
+SELECT jmeno, prijmeni 
+FROM Policista NATURAL JOIN Prestupek
+WHERE zhotoveni = TO_DATE('10-04-2020', 'DD-MM-YYYY') AND vyse = 4500;
+--4-- 
+
+--5--
+-- Zobrazi vozidla a jmena jejich majitelu
+SELECT VIN, znacka, nazev, jmeno, prijmeni FROM Vozidlo NATURAL JOIN Majitel NATURAL JOIN Osoba;
+--5--
+
+--6--
+-- Zobrazi sumu, kterou museli ridici zaplatit za vsechny sve prestupky
+SELECT O.jmeno, O.prijmeni, SUM(P.vyse) celkem_presupky 
+FROM Prestupek P, Ridic R, Osoba O
+WHERE P.ID_prukazu = R.ID_prukazu AND R.ID_osoby = O.ID_osoby
+GROUP BY O.jmeno, O.prijmeni;
+
+--6--
+
+--7--
+-- Zobrazi ridice u kterych neexistuji prestupky
+SELECT * FROM Osoba NATURAL JOIN (SELECT ID_osoby, COUNT(nazev) pocet_prestupku FROM Ridic NATURAL LEFT JOIN (SELECT * FROM Prestupek NATURAL JOIN Ridic) GROUP BY ID_osoby)
+WHERE pocet_prestupku = 0;
+
+--7--
+
+--8--
+-- Zobrazi majitele, kteri maji vozidlo od spolecnosti Honda nebo Yamaha
+SELECT jmeno, prijmeni
+FROM Vozidlo NATURAL JOIN Osoba NATURAL JOIN Majitel
+WHERE znacka IN ('Honda', 'Yamaha');
+--8--
+
+--9--
+-- Zobrazi informace o vozidlech, ktere byly ukradene a informace o jejich kradezi zapsal Ludovic Cruchot
+SELECT VIN, znacka, nazev, rok_vyroby, barva, objem_motoru, SPZ
+FROM Vozidlo V NATURAL JOIN Kradez K NATURAL JOIN Policista P
+WHERE P.jmeno = 'Ludovic' AND P.prijmeni = 'Cruchot';
+--9--
+
+--10--
+-- Zobrazi policisty, kteri nezapsali zadnou kradez
+SELECT * 
+FROM Policista P
+WHERE NOT EXISTS (SELECT * FROM Kradez K WHERE P.sluzebni_c = K.sluzebni_c);
+--10--
+
+--11--
+-- Zobrazi pocet prestupku pro vsechny ridice, serazene sestupne
+SELECT ID_osoby, jmeno, prijmeni, COUNT(nazev) pocet_prestupku 
+FROM Osoba NATURAL JOIN (SELECT * FROM Ridic NATURAL LEFT JOIN (SELECT * FROM Prestupek NATURAL JOIN Ridic)) 
+GROUP BY ID_osoby, jmeno, prijmeni ORDER BY pocet_prestupku DESC;
+--11--
+
+--12--
+-- Zobrazi vsechny presupky a policisty, kteri je zapsali
+SELECT * 
+FROM Prestupek NATURAL JOIN Policista;
+--12--
+
+-- 13 --
+-- Zobrazi informace o vsech vozidlech ktere byly ukradeny
+SELECT *
+FROM Vozidlo
+WHERE nazev IN (SELECT nazev FROM Vozidlo NATURAL JOIN Kradez);
+
+-- 13 --
+---SELECTY---
