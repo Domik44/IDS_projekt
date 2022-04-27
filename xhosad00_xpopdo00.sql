@@ -1,4 +1,4 @@
---Adam Hos xhosad0OsobaHos xhosad0RidicHos xhosad0RidiHos xhosad00 
+--Adam Hos xhosad00
 --Dominik Pop xpopdo00
 
 --drop tables
