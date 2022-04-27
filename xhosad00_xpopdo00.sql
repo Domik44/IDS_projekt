@@ -1,11 +1,11 @@
---Adam Hos xhosad00 
+--Adam Hos xhosad0OsobaHos xhosad0RidicHos xhosad0RidiHos xhosad00 
 --Dominik Pop xpopdo00
 
 --drop tables
 DROP TABLE Kradez;
 DROP TABLE Prestupek;
 DROP TABLE Policista;
-DROP TABLE RidickeOpravneni;
+DROP TABLE RidicskeOpravneni;
 DROP TABLE MelSPZ;
 DROP TABLE HistorieSPZ;
 DROP TABLE Motocykl;
@@ -23,11 +23,14 @@ DROP SEQUENCE S_ID_opravneni;
 DROP SEQUENCE S_ID_prestupku;
 DROP SEQUENCE S_ID_majitele;
 DROP SEQUENCE S_ID_kradeze;
+DROP SEQUENCE policista_id_seq;
 
 -- alter formats
 
 ALTER SESSION SET NLS_TIMESTAMP_FORMAT = 'DD-MM-YYYY HH24:MI';
 ALTER SESSION SET NLS_DATE_FORMAT = 'DD-MM-YYYY';
+
+SET SERVEROUTPUT ON;
 
 --create sequences
 CREATE SEQUENCE S_ID_osoby START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
@@ -63,7 +66,7 @@ CREATE TABLE Ridic(
     CONSTRAINT FK_ID_osoby FOREIGN KEY (ID_osoby) REFERENCES Osoba 
 );
 
-CREATE TABLE RidickeOpravneni(
+CREATE TABLE RidicskeOpravneni(
     ID_opravneni NUMBER DEFAULT S_ID_opravneni.nextval,
     zhotoveni DATE,
     popis CHAR(2),
@@ -163,14 +166,133 @@ CREATE TABLE NakladniAutomobil(
  );
 
 
---------SEEDING------
---Policista
-INSERT INTO Policista(sluzebni_c, jmeno, prijmeni, pozice)
-    VALUES (525320,'Ludovic', 'Cruchot','cetnik');
-INSERT INTO Policista(sluzebni_c, jmeno, prijmeni, pozice)
-    VALUES (525321,'Jean', 'Bonjour','porucik');
-INSERT INTO Policista(sluzebni_c, jmeno, prijmeni, pozice)
-    VALUES (525322,'James', 'Bond','porucik');
+-------- 4) PROCEDURY --------
+-- Procedura vypise na vystup jmeno, prijmeni a vek vsech ridicu mladsich 18 let
+CREATE OR REPLACE PROCEDURE vekPod18
+AS
+    vek NUMERIC;
+    CURSOR curs_ridici IS SELECT jmeno, prijmeni, datum_narozeni FROM Osoba O, Ridic R WHERE O.ID_osoby = R.ID_osoby;
+    radek curs_ridici%ROWTYPE;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Procedura vypise ridice mladsi 18 let:');
+    IF curs_ridici %ISOPEN THEN
+        CLOSE curs_ridici;
+    END IF;
+    OPEN curs_ridici;
+    
+    LOOP
+        FETCH curs_ridici INTO radek;
+        EXIT WHEN curs_ridici%NOTFOUND;
+        vek := (sysdate - radek.datum_narozeni) / 365;
+        IF vek < 18 THEN
+            DBMS_OUTPUT.PUT_LINE(radek.jmeno || ' ' || radek.prijmeni || ' ' || vek);
+        END IF;
+    END LOOP;
+    DBMS_OUTPUT.PUT_LINE('');
+EXCEPTION
+        WHEN others THEN
+         DBMS_OUTPUT.PUT_LINE('Error pri procedure vekPod18!');
+END;
+/
+
+-- Procedura vypocita procentualni zastoupeni jednotlivych typu vozidel (automobil, motocykl, autobus, nakladni automobil)
+CREATE OR REPLACE PROCEDURE zastoupeni_vozidel
+AS
+    pocet_celkem NUMBER;
+    pocet_typ NUMBER;
+    procenta_typ NUMBER;
+    CURSOR curs_auto IS SELECT * FROM OsobniAutomobil;
+    CURSOR curs_motocykl IS SELECT * FROM Motocykl;
+    CURSOR curs_autobus IS SELECT * FROM Autobus;
+    CURSOR curs_nakladak IS SELECT * FROM NakladniAutomobil;
+    CURSOR curs_vozidla IS SELECT * FROM Vozidlo;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Procedura vypise procentualni zastoupeni typu vozidel v databazi:');
+    pocet_celkem := 0;
+    FOR radek IN curs_vozidla LOOP
+        pocet_celkem := pocet_celkem + 1;
+    END LOOP;
+    
+    pocet_typ := 0;
+    FOR radek IN curs_auto LOOP
+        pocet_typ := pocet_typ + 1;
+    END LOOP;
+    procenta_typ := round((pocet_typ/pocet_celkem)*100);
+    DBMS_OUTPUT.PUT_LINE('Zastoupeni osobnich automobilu: ' || procenta_typ || '%');
+    
+    pocet_typ := 0;
+    FOR radek IN curs_motocykl LOOP
+        pocet_typ := pocet_typ + 1;
+    END LOOP;
+    procenta_typ := round((pocet_typ/pocet_celkem)*100);
+    DBMS_OUTPUT.PUT_LINE('Zastoupeni motocyklu: ' || procenta_typ || '%');
+    
+    pocet_typ := 0;
+    FOR radek IN curs_autobus LOOP
+        pocet_typ := pocet_typ + 1;
+    END LOOP;
+    procenta_typ := round((pocet_typ/pocet_celkem)*100);
+    DBMS_OUTPUT.PUT_LINE('Zastoupeni autobusu: ' || procenta_typ || '%');
+    
+    pocet_typ := 0;
+    FOR radek IN curs_nakladak LOOP
+        pocet_typ := pocet_typ + 1;
+    END LOOP;
+    procenta_typ := round((pocet_typ/pocet_celkem)*100);
+    DBMS_OUTPUT.PUT_LINE('Zastoupeni nakladnich automobilu: ' || procenta_typ || '%');
+    
+END;
+/
+-------- 4) PROCEDURY --------
+
+-------- 4) TRIGGERY --------
+-- Trigger, ktery prirazuje sluzebni cisla od urcite hodnoty (420000)
+CREATE SEQUENCE policista_id_seq
+    START WITH 420000
+    INCREMENT BY 1;
+CREATE OR REPLACE TRIGGER policista_id
+    BEFORE INSERT ON Policista
+    FOR EACH ROW
+    BEGIN
+        :NEW.sluzebni_c := policista_id_seq.nextval;
+    END;
+/
+
+-- DEMONSTRACE TRIGGERU pro sluzebni cisla
+INSERT INTO Policista(jmeno, prijmeni, pozice)
+    VALUES ('Ludovic', 'Cruchot','cetnik');
+INSERT INTO Policista(jmeno, prijmeni, pozice)
+    VALUES ('Jean', 'Bonjour','porucik');
+INSERT INTO Policista(jmeno, prijmeni, pozice)
+    VALUES ('James', 'Bond','porucik');
+SELECT * FROM Policista;
+
+-- Trigger, ktery po vymene SPZ prida starou do historie
+CREATE OR REPLACE TRIGGER update_historie_SPZ
+    AFTER UPDATE ON Vozidlo
+    FOR EACH ROW
+    BEGIN
+        IF :OLD.SPZ != :NEW.SPZ THEN
+            INSERT INTO HistorieSPZ (SPZ, datum_zmeny) VALUES (:OLD.SPZ, sysdate);
+        END IF;
+    END;
+/
+
+-- Trigger, ktery po pridani prestupku aktualizuje trestne body ridice a pripadne i prida zakaz rizeni
+CREATE OR REPLACE TRIGGER update_trestne_body
+    AFTER INSERT ON Prestupek
+    FOR EACH ROW
+    BEGIN
+        UPDATE Ridic SET trestneBody = trestneBody + :NEW.body WHERE ID_prukazu = :NEW.ID_prukazu; 
+        UPDATE Ridic SET zakaz_rizeni = 1 WHERE ID_prukazu = :NEW.ID_prukazu;
+    END;
+/
+
+-------- TRIGGERY --------
+
+-------- 2) SEEDING --------
+-- Policista
+-- Presunuto nahoru do TRIGGERU
 
 --Osoba
 INSERT INTO Osoba(jmeno, prijmeni, datum_narozeni, rodne_cislo)
@@ -196,30 +318,30 @@ INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
 INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
     VALUES ('EB693227', 0, 6);
     
---RidickeOpravneni
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+--RidicskeOpravneni
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'AM', 'EG123456');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'B', 'EG123456');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'B1', 'EG123456');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('13-09-1994', 'DD-MM-YY'), 'B', 'FF112346');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('13-09-1994', 'DD-MM-YY'), 'B1', 'FF112346');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('03-04-2012', 'DD-MM-YY'), 'C', 'FF112346');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('03-04-2012', 'DD-MM-YY'), 'C1', 'FF112346');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('06-02-1964', 'DD-MM-YY'), 'B1', 'EA843115');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('06-02-1964', 'DD-MM-YY'), 'B', 'EA843115');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'A1', 'EG123456');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('05-02-2005', 'DD-MM-YY'), 'A2', 'EG123456');
-INSERT INTO RidickeOpravneni(zhotoveni, popis, ID_prukazu)
+INSERT INTO RidicskeOpravneni(zhotoveni, popis, ID_prukazu)
     VALUES (TO_DATE('15-07-2021', 'DD-MM-YY'), 'A1', 'EB693227');
 
 --Majitel
@@ -268,55 +390,23 @@ INSERT INTO MelSPZ(VIN, SPZ)
 
 --Kradez
 INSERT INTO  Kradez(zemne, mesto, ulice, datum_a_cas, VIN, sluzebni_c)
-    VALUES ('CR', 'Janlovice', 'Janlovice 202', '10-04-1995 17:30', '4JGBB86E27A199749', 525320);
+    VALUES ('CR', 'Janlovice', 'Janlovice 202', '10-04-1995 17:30', '4JGBB86E27A199749', 420000);
 INSERT INTO  Kradez(zemne, mesto, ulice, datum_a_cas, VIN, sluzebni_c)
-    VALUES ('CR', 'Praha', 'Neumannova 2', '10-08-2002 12:33', '4JGBB86E27A199749', 525321);
+    VALUES ('CR', 'Praha', 'Neumannova 2', '10-08-2002 12:33', '4JGBB86E27A199749', 420001);
 
 
---PRESTUPEK---- hrani si s updatem
---dotaz pro ziskani poctu udelenych body za nejnovjejsi prestupek
---SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC), pouzit nize
---1--
+---- PRESTUPEK ---- 
+-- DEMONSTRACE TRIGGERU
 INSERT INTO Prestupek(nazev, popis, zhotoveni, vyse, body, ID_prukazu, sluzebni_c)
-    VALUES ('Průjezd na cervenou', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Námestní a Brumbalova', TO_DATE('10-04-1995', 'DD-MM-YYYY'), 4500, 3, 'EG123456', 525320);
-    
-UPDATE Ridic
-SET trestneBody = trestneBody + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
-WHERE ID_prukazu = 'EG123456';
-
-UPDATE Ridic
-SET zakaz_rizeni = 1
-WHERE trestneBody >= 12;
---1--
---2
+    VALUES ('Průjezd na cervenou', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Námestní a Brumbalova', TO_DATE('10-04-1995', 'DD-MM-YYYY'), 4500, 3, 'EG123456', 420000);
 INSERT INTO Prestupek(nazev, popis, zhotoveni, vyse, body, ID_prukazu, sluzebni_c)
-    VALUES ('Průjezd na cervenou a kolize', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova, čelní náraz s SUV, ...', TO_DATE('10-04-2020', 'DD-MM-YYYY'), 4500, 5, 'EG123456', 525320);
-
-UPDATE Ridic
-SET trestneBody = trestneBody + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
-WHERE ID_prukazu = 'EG123456';
-
-UPDATE Ridic
-SET zakaz_rizeni = 1
-WHERE trestneBody >= 12;
---2--
-
---3--
+    VALUES ('Průjezd na cervenou a kolize', 'průjzd na červenou v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova, čelní náraz s SUV, ...', TO_DATE('10-04-2020', 'DD-MM-YYYY'), 4500, 5, 'EG123456', 420000);
 INSERT INTO Prestupek(nazev, popis, zhotoveni, vyse, body, ID_prukazu, sluzebni_c)
-    VALUES ('Prekroceni rychlosti', 'Prekroceni rychlosti v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova', TO_DATE('15-05-2021', 'DD-MM-YYYY'), 5000, 4, 'EG123456', 525321);
+    VALUES ('Prekroceni rychlosti', 'Prekroceni rychlosti v městě St. Tropez na křižovatce na ulicích Gondrova a Frňákova', TO_DATE('15-05-2021', 'DD-MM-YYYY'), 5000, 4, 'EG123456', 420001);
+---- PRESTUPEK ----
+-------- 2) SEEDING --------
 
-UPDATE Ridic
-SET trestneBody = trestneBody + (SELECT * FROM (SELECT body FROM Prestupek  WHERE ID_prukazu = 'EG123456' ORDER by zhotoveni DESC) WHERE rownum = 1)
-WHERE ID_prukazu = 'EG123456';
-
-UPDATE Ridic
-SET zakaz_rizeni = 1
-WHERE trestneBody >= 12;
---3--
---PRESTUPEK----
-
-
----SELECTY---
+-------- 3) SELECTY --------
 --1--
 -- Select vybere osoby narozene po roce 2004 majici ridicske opravneni a vlastnici motocykl.
 SELECT ID_osoby, jmeno, prijmeni, znacka, nazev
@@ -329,7 +419,7 @@ WHERE datum_narozeni > TO_DATE('31-12-2004', 'DD-MM-YYYY');
 -- Vybere ridice, kteri maji zakaz rizeni a vlastni vic jak 1 ridicske opravneni
 SELECT jmeno, prijmeni
 FROM (SELECT jmeno, prijmeni, zakaz_rizeni, COUNT(*) pocet
-    FROM Osoba NATURAL JOIN Ridic NATURAL JOIN RidickeOpravneni
+    FROM Osoba NATURAL JOIN Ridic NATURAL JOIN RidicskeOpravneni
     GROUP BY jmeno, prijmeni, zakaz_rizeni)
 WHERE pocet > 1 AND zakaz_rizeni = 1;
 --2--
@@ -364,7 +454,8 @@ GROUP BY O.jmeno, O.prijmeni;
 
 --7--
 -- Zobrazi ridice u kterych neexistuji prestupky
-SELECT * FROM Osoba NATURAL JOIN (SELECT ID_osoby, COUNT(nazev) pocet_prestupku FROM Ridic NATURAL LEFT JOIN (SELECT * FROM Prestupek NATURAL JOIN Ridic) GROUP BY ID_osoby)
+SELECT id_osoby ID_OSOBY,
+pocet_prestupku POCET_PRESTUPKU FROM Osoba NATURAL JOIN (SELECT ID_osoby, COUNT(nazev) pocet_prestupku FROM Ridic NATURAL LEFT JOIN (SELECT * FROM Prestupek NATURAL JOIN Ridic) GROUP BY ID_osoby)
 WHERE pocet_prestupku = 0;
 
 --7--
@@ -410,4 +501,89 @@ FROM Vozidlo
 WHERE nazev IN (SELECT nazev FROM Vozidlo NATURAL JOIN Kradez);
 
 -- 13 --
----SELECTY---
+-------- SELECTY --------
+
+-------- 4) PRISTUPOVA PRAVA --------
+-- TODO -> EXECUTE pro procedury
+GRANT ALL ON Policista TO xhosad00;
+GRANT ALL ON Osoba TO xhosad00;
+GRANT ALL ON Ridic TO xhosad00;
+GRANT ALL ON RidicskeOpravneni TO xhosad00;
+GRANT ALL ON Prestupek TO xhosad00;
+GRANT ALL ON Majitel TO xhosad00;
+GRANT ALL ON Vozidlo TO xhosad00;
+GRANT ALL ON Kradez TO xhosad00;
+GRANT ALL ON HistorieSPZ TO xhosad00;
+GRANT ALL ON MelSPZ TO xhosad00;
+GRANT ALL ON Motocykl TO xhosad00;
+GRANT ALL ON OsobniAutomobil TO xhosad00;
+GRANT ALL ON Autobus TO xhosad00;
+GRANT ALL ON NakladniAutomobil TO xhosad00;
+
+GRANT EXECUTE ON vekPod18 TO xhosad00;
+GRANT EXECUTE ON zastoupeni_vozidel TO xhosad00;
+-------- PRISTUPOVA PRAVA --------
+
+-------- 4) EXPLAIN PLAN --------
+
+EXPLAIN PLAN FOR
+    SELECT O.jmeno, O.prijmeni, SUM(P.vyse) celkem_presupky 
+    FROM Prestupek P, Ridic R, Osoba O
+    WHERE P.ID_prukazu = R.ID_prukazu AND R.ID_osoby = O.ID_osoby
+    GROUP BY O.jmeno, O.prijmeni;
+SELECT * FROM TABLE(DBMS_XPLAN.display);
+
+
+CREATE INDEX index_ridic ON Ridic (ID_prukazu, ID_osoby);
+CREATE INDEX index_prestupek ON Prestupek (ID_prukazu, Vyse);
+CREATE INDEX index_osoba ON Osoba (ID_osoby, jmeno, prijmeni);
+
+EXPLAIN PLAN FOR
+    SELECT O.jmeno, O.prijmeni, SUM(P.vyse) celkem_presupky 
+    FROM Prestupek P, Ridic R, Osoba O
+    WHERE P.ID_prukazu = R.ID_prukazu AND R.ID_osoby = O.ID_osoby
+    GROUP BY O.jmeno, O.prijmeni;
+SELECT * FROM TABLE(DBMS_XPLAN.display);
+
+DROP INDEX index_ridic;
+DROP INDEX index_prestupek;
+DROP INDEX index_osoba;
+-------- EXPLAIN PLAN --------
+
+-------- 4) POHLEDY --------
+DROP MATERIALIZED VIEW ridici_view;
+
+CREATE MATERIALIZED VIEW ridici_view
+CACHE
+BUILD IMMEDIATE 
+REFRESH ON COMMIT
+AS
+SELECT *
+FROM xpopdo00.Ridic;
+
+
+SELECT * FROM ridici_view;
+
+INSERT INTO Ridic(ID_prukazu, zakaz_rizeni, ID_osoby)
+    VALUES ('EB693248', 0, 5);
+
+COMMIT;
+    
+SELECT * FROM ridici_view;
+-------- POHLEDY --------
+
+-------- 4) VOLANI PROCEDUR --------
+BEGIN
+    vekPod18;
+    zastoupeni_vozidel;
+END;
+/
+-------- VOLANI PROCEDUR --------
+
+-------- 4) DEMONSTRACE TRIGGERU --------
+UPDATE Vozidlo SET SPZ = '7B755577' WHERE VIN = 'JH4KA8172PC002873';
+SELECT * FROM HistorieSPZ;
+
+-- inserty viz.: PRESTUPKY, radek: 400
+SELECT * FROM Ridic;
+-------- DEMONSTRACE TRIGGERU --------
