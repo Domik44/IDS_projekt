@@ -278,13 +278,13 @@ CREATE OR REPLACE TRIGGER update_historie_SPZ
     END;
 /
 
--- Trigger, ktery po pridani prestupku aktualizuje trestne body ridice a pripadne i prida zakaz rizeni
+-- Trigger, ktery po pridani prestupku aktualizuje trestne body ridice a pripadne i prida zakaz rizeni pokud body presahnou hranici 12
 CREATE OR REPLACE TRIGGER update_trestne_body
     AFTER INSERT ON Prestupek
     FOR EACH ROW
     BEGIN
         UPDATE Ridic SET trestneBody = trestneBody + :NEW.body WHERE ID_prukazu = :NEW.ID_prukazu; 
-        UPDATE Ridic SET zakaz_rizeni = 1 WHERE ID_prukazu = :NEW.ID_prukazu;
+        UPDATE Ridic SET zakaz_rizeni = 1 WHERE ID_prukazu = :NEW.ID_prukazu AND trestneBody >= 12;
     END;
 /
 
